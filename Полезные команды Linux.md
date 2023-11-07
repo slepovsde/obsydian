@@ -80,3 +80,8 @@ df -i /var/lib/docker
 ps aux | awk '{print $11}'| sort -nr | uniq -c | sort -nr | head
 
 
+
+for i in {1..15}; do
+  filename="CTDA_SBRS_20231101001000-$(printf "%04d" $i).csv"
+  touch "$filename"
+done
