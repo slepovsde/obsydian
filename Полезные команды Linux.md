@@ -86,3 +86,8 @@ for i in {1..15}; do
   touch "$filename"
 done
 
+for i in $(seq -w 1 15); do
+  filename="CTDA_SBRS_20231101001000-${i}.csv"
+  touch "$filename"
+done
+
