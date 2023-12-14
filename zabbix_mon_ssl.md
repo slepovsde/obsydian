@@ -50,4 +50,65 @@
 
    При необходимости, добавьте условия срабатывания триггера.
 
+
+### 1. Серверные сертификаты на Apache:
+
+Для мониторинга срока годности серверных сертификатов Apache вы можете использовать предложенный ранее скрипт. Однако, вам нужно будет настроить Apache для предоставления информации о сертификате через `mod_status`. Например:
+
+1. Установите и включите `mod_status`:
+
+   ```bash
+   sudo a2enmod status
+   sudo systemctl restart apache2
+   ```
+
+2. Настройте доступ к `mod_status` в вашем конфигурационном файле Apache:
+
+   ```apache
+   <Location "/server-status">
+       SetHandler server-status
+       Require ip 127.0.0.1
+   </Location>
+   ```
+
+   Это позволит получить информацию о сервере по URL, например, `http://your-server/server-status`.
+
+3. В скрипте проверки срока годности, используйте `openssl` с параметром `-servername` и `SNI`:
+
+   ```bash
+   #!/bin/bash
+
+   host="$1"
+   port="${2:-443}"
+
+   expiry_date=$(openssl s_client -servername $host -connect $host:$port -showcerts </dev/null 2>/dev/null | openssl x509 -noout -dates | grep notAfter | cut -d= -f2)
+
+   expiry_timestamp=$(date -d "$expiry_date" +%s)
+   current_timestamp=$(date +%s)
+
+   days_until_expiry=$(( ($expiry_timestamp - $current_timestamp) / (60 * 60 * 24) ))
+
+   echo $days_until_expiry
+   ```
+
+### 2. Клиентские сертификаты в Java:
+
+Для клиентских сертификатов в Java, у вас может быть скрипт, который использует `keytool` для проверки срока годности. Пример:
+
+```bash
+#!/bin/bash
+
+keystore_path="/path/to/your/keystore.p12"
+keystore_password="your_keystore_password"
+
+expiry_date=$(keytool -list -v -keystore $keystore_path -storetype PKCS12 -storepass $keystore_password | grep 'Valid from' | cut -d' ' -f5-)
+
+expiry_timestamp=$(date -d "$expiry_date" +%s)
+current_timestamp=$(date +%s)
+
+days_until_expiry=$(( ($expiry_timestamp - $current_timestamp) / (60 * 60 * 24) ))
+
+echo $days_until_expiry
+```
+
 Теперь Zabbix будет мониторить срок годности SSL сертификата для выбранного хоста и уведомлять вас в случае необходимости. Убедитесь, что ваш Zabbix-сервер имеет доступ к исполняемому файлу скрипта и что фаервол разрешает подключение к серверам по указанным вами портам.
